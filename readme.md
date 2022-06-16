@@ -1,4 +1,11 @@
-###1.4.1 Faster Linking
+# README
+
+This is a repo that is teaching me production level rust by following Luca Palmieri's book Zero to Production in Rust. I decided to make this public, because why not.
+
+Down here are annotations from the book itself.
+
+### 1.4.1 Faster Linking
+
 When looking at the inner development loop, we are primarily looking at the performance of incremental compilation - how long it takes cargo to rebuild our binary after having made a small change
 to the source code.
 A sizeable chunk of time is spent in the linking phase - assembling the actual binary given the
@@ -36,11 +43,21 @@ to know if our code compiles or not. cargo check was born to serve exactly this 
 That is exactly where cargo expand shines: it expands all macros in your code without passing the
 output to the compiler, allowing you to step through it and understand what is going on
 
-
 ### Cargo Edit
+
 When installed by:
+
 ```sh
 cargo install cargo-edit
 ```
-You can use 
+
+You can use
 `cargo add`
+
+### 3.5.1.2 Choosing A Random Port spawn_app will always try to run our application on port
+
+8000 - not ideal:
+• if port 8000 is being used by another program on our machine (e.g. our own application!), tests
+will fail;
+• if we try to run two or more tests in parallel only one of them will manage to bind the port, all
+others will fail.
