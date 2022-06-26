@@ -1,6 +1,7 @@
 use std::net::TcpListener;
 
-use actix_web::rt::spawn;
+use actix_web;
+use rstest::rstest;
 use urlencoding::encode;
 
 const BASE_URL: &str = "127.0.0.1";
@@ -82,10 +83,8 @@ async fn subscribe_returns_400_when_data_is_missing() {
     let enc_name = format!("name={}", name);
     let enc_email = format!("email={}", email);
 
-    /**
-     * Table driven tests.
-     * Each of the following is a test case!
-     */
+    // Table driven tests.
+    //Each of the following is a test case!
     let test_cases = vec![
         (enc_name, "missing email"),
         (enc_email, "missing name"),
@@ -106,8 +105,39 @@ async fn subscribe_returns_400_when_data_is_missing() {
         assert_eq!(
             400,
             response.status().as_u16(),
-            "The API did not fail with 400 Bad Request when the payload was{}.",
+            "The API did not fail with 400 Bad Request when the payload was {}.",
             error_message
         );
     }
+}
+
+// Using a parametrized version of the function above:
+#[rstest]
+#[case("Night Stucker", "", "missing email")]
+#[actix_web::test]
+async fn parametrized_subscribe_returns_400_when_data_is_missing(
+    #[case] name: &str,
+    #[case] email: &str,
+    #[case] error_message: &str,
+) {
+    let app_address = init("/subscriptions");
+    let client = reqwest::Client::new();
+
+    let invalid_body = format!("name={}email={}", encode(name), encode(email));
+    // Act
+    let response = client
+        .post(&app_address)
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .body(invalid_body)
+        .send()
+        .await
+        .expect("Failed to execute request");
+
+    // Assert
+    assert_eq!(
+        400,
+        response.status().as_u16(),
+        "The API did not fail with 400 Bad Request when the payload was {}.",
+        error_message
+    );
 }
