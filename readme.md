@@ -4,6 +4,8 @@ This is a repo that is teaching me production level rust by following Luca Palmi
 
 Down here are annotations from the book itself.
 
+Note. That I'm also adding my personal touches while I work so I can get a better understanding.
+
 ### 1.4.1 Faster Linking
 
 When looking at the inner development loop, we are primarily looking at the performance of incremental compilation - how long it takes cargo to rebuild our binary after having made a small change
@@ -61,3 +63,8 @@ You can use
 will fail;
 • if we try to run two or more tests in parallel only one of them will manage to bind the port, all
 others will fail.
+
+How do we find a random available port for our tests?
+The operating system comes to the rescue: we will be using port 0.
+Port 0 is special-cased at the OS level: trying to bind port 0 will trigger an OS scan for an available
+port which will then be bound to the application.
