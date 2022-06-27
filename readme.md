@@ -80,3 +80,29 @@ https://crates.io/crates/sqlx-cli
 ```sh
 cargo install sqlx-cli --no-default-features --features native-tls,postgres
 ```
+
+Note, that this doesn't use the init.sh script nor WSL.
+
+### Adding a Migration
+
+```
+ SET DATABASE_URL=postgres://postgres:password@127.0.0.1:5432/newsletter
+```
+
+```
+Creating migrations\20220627113616_create_subscriptions_table.sql
+
+Congratulations on creating your first migration!
+
+Did you know you can embed your migrations in your application binary?
+On startup, after creating your database connection or pool, add:
+
+sqlx::migrate!().run(<&your_pool OR &mut your_connection>).await?;
+
+Note that the compiler won't pick up new migrations if no Rust source files have changed.
+You can create a Cargo build script to work around this with `sqlx migrate build-script`.
+```
+
+```sh
+sqlx migrate run
+```
