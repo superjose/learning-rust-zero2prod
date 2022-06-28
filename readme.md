@@ -104,5 +104,5 @@ You can create a Cargo build script to work around this with `sqlx migrate build
 ```
 
 ```sh
-sqlx migrate run
+sqlx migrate run --database-url postgres://postgres:password@127.0.0.1:5432/newsletter
 ```

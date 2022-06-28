@@ -1,3 +1,8 @@
+//! src/lib.rs
+pub mod configuration;
+pub mod routes;
+pub mod startup;
+
 use actix_web::{dev::Server, get, post, web::Form, App, HttpResponse, HttpServer, Responder};
 use serde::Deserialize;
 use std::net::TcpListener;

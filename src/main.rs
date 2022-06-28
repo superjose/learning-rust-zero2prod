@@ -1,6 +1,8 @@
 use std::net::TcpListener;
 
+use zero2prod::configuration::get_configuration;
 use zero2prod::run;
+
 const BASE_URL: &str = "127.0.0.1";
 
 /**
