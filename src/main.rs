@@ -12,8 +12,7 @@ const BASE_URL: &str = "127.0.0.1";
 async fn main() -> std::io::Result<()> {
     // Bubble up the io::Error if we failed to bind the address
     // Otherwise call .await on our Server
-    let listener = get_listener();
-    let port = listener.local_addr().unwrap().port();
+    let (listener, port) = get_listener();
 
     print!("Listening on {}:{}", BASE_URL, port);
 
@@ -24,8 +23,11 @@ async fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn get_listener() -> TcpListener {
-    let base_url = format!("{}:8080", BASE_URL);
+fn get_listener() -> (TcpListener, u16) {
+    let configuration = get_configuration().expect("Failed to read configuration");
+    let port = configuration.application_port;
+    let base_url = format!("{}:{}", BASE_URL, port);
     print!("{}", base_url);
-    return TcpListener::bind(base_url).expect("Failed to bind random part");
+    let listener = TcpListener::bind(base_url).expect("Failed to bind random part");
+    return (listener, port);
 }
