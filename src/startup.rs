@@ -2,11 +2,11 @@ use crate::routes::{create_subscription, health_check};
 use actix_web::web::Data;
 
 use actix_web::{dev::Server, App, HttpServer};
-use sqlx::PgConnection;
+use sqlx::PgPool;
 use std::net::TcpListener;
 
-pub fn run(listener: TcpListener, connection: PgConnection) -> Result<Server, std::io::Error> {
-    let connection = Data::new(connection);
+pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Error> {
+    let connection = Data::new(db_pool);
 
     let server = HttpServer::new(move || {
         App::new()

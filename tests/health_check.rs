@@ -2,34 +2,21 @@ use std::net::TcpListener;
 
 use actix_web;
 use rstest::rstest;
-use sqlx::{Connection, PgConnection};
+use sqlx::{Connection, PgConnection, PgPool};
 use urlencoding::encode;
 use zero2prod::configuration::get_configuration;
 
 const BASE_URL: &str = "127.0.0.1";
 
+pub struct TestApp {
+    pub address: String,
+    pub db_pool: PgPool,
+}
+
 /**
  * We need to refactor our project into a library and a binary: all our logic will live in the library crate
 while the binary itself will be just an entrypoint with a very slim main function
  */
-
-#[actix_web::test]
-async fn health_check_works() {
-    // Arrange
-    let client = reqwest::Client::new();
-    let url = init("/health_check");
-
-    // Act
-    let response = client
-        .get(url)
-        .send()
-        .await
-        .expect("Failed to execute request.");
-
-    // Assert
-    assert!(response.status().is_success());
-    assert_eq!(Some(0), response.content_length());
-}
 
 fn init(url: &str) -> String {
     let base_url_with_port = spawn_app();
@@ -37,7 +24,7 @@ fn init(url: &str) -> String {
 }
 
 // Launch our application in the background ~somehow~
-fn spawn_app() -> String {
+fn spawn_app() -> TestApp {
     // We take the BASE_URL const and assign it a port 0. We then
     // pas the listener to the server
     let base_url = format!("{}:0", BASE_URL);
@@ -49,15 +36,15 @@ fn spawn_app() -> String {
     // We pass the port now to our server
     let server = zero2prod::run(listener).expect("Failed to bind address");
     let _ = actix_web::rt::spawn(server);
-    format!("http://{}:{}", BASE_URL, port)
+    let address = format!("http://{}:{}", BASE_URL, port);
 }
 
-async fn init_db() -> PgConnection {
+async fn init_db() -> PgPool {
     let configuration = get_configuration().expect("Failed to read configuration");
     let connection_string = configuration.database.connection_string();
     // The 'Connection' trait must be in scope for us to invoke
     // 'PgConnection::connect - it is not an inherent method of the struct!
-    let connection = PgConnection::connect(&connection_string)
+    let connection = PgPool::connect(&connection_string)
         .await
         .expect("Failed to connect to Postgres.");
     return connection;
@@ -161,4 +148,22 @@ async fn parametrized_subscribe_returns_400_when_data_is_missing(
         "The API did not fail with 400 Bad Request when the payload was {}.",
         error_message
     );
+}
+
+#[actix_web::test]
+async fn health_check_works() {
+    // Arrange
+    let client = reqwest::Client::new();
+    let url = init("/health_check");
+
+    // Act
+    let response = client
+        .get(url)
+        .send()
+        .await
+        .expect("Failed to execute request.");
+
+    // Assert
+    assert!(response.status().is_success());
+    assert_eq!(Some(0), response.content_length());
 }

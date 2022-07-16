@@ -21,9 +21,11 @@ serde = { version = "1.0.137", features = ["derive"] }
 tokio = "1.19.2"
 urlencoding = "2.1.0"
 config = "0.13.1"
+uuid = { version = "1.1.2", features = ["v4"] }
+chrono = "0.4.19"
 
 [dependencies.sqlx]
-version = "0.5.7"
+version = "0.6.0"
 default-features = false
 features = [
     "runtime-actix-rustls",
@@ -46,3 +48,8 @@ rustflags = ["-C", "link-arg=-fuse-ld=lld"]
 [[bin]]
 name = "zero2prod"
 path = "src/main.rs"
+
+
+[profile.dev.build-override]
+opt-level = 3
+codegen-units = 1
