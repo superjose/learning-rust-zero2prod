@@ -1,6 +1,6 @@
 use actix_web::{
     post,
-    web::{self, Form},
+    web::{self},
     HttpResponse,
 };
 use chrono::Utc;
@@ -14,10 +14,6 @@ pub struct FormData {
 }
 
 #[post("/subscriptions")]
-async fn create_subscription(_form: Form<FormData>) -> HttpResponse {
-    HttpResponse::Ok().finish()
-}
-
 pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
     let query = sqlx::query!(
         r#"

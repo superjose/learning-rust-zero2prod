@@ -117,3 +117,5 @@ cargo add chrono
 ```
 
 chrono will work for Utc::now
+
+Cargo test no capture

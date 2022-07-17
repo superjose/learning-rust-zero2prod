@@ -1,64 +1,18 @@
-use std::net::TcpListener;
-
 use actix_web;
 use rstest::rstest;
-use sqlx::{Connection, PgConnection, PgPool};
+mod setup;
+
 use urlencoding::encode;
-use zero2prod::configuration::get_configuration;
-
-const BASE_URL: &str = "127.0.0.1";
-
-pub struct TestApp {
-    pub address: String,
-    pub db_pool: PgPool,
-}
-
-/**
- * We need to refactor our project into a library and a binary: all our logic will live in the library crate
-while the binary itself will be just an entrypoint with a very slim main function
- */
-
-fn init(url: &str) -> String {
-    let base_url_with_port = spawn_app();
-    format!("{}{}", base_url_with_port, url)
-}
-
-// Launch our application in the background ~somehow~
-fn spawn_app() -> TestApp {
-    // We take the BASE_URL const and assign it a port 0. We then
-    // pas the listener to the server
-    let base_url = format!("{}:0", BASE_URL);
-    let listener = TcpListener::bind(base_url).expect("Failed to bind random port");
-
-    // We retrieve the port assigned by the OS
-    let port = listener.local_addr().unwrap().port();
-
-    // We pass the port now to our server
-    let server = zero2prod::run(listener).expect("Failed to bind address");
-    let _ = actix_web::rt::spawn(server);
-    let address = format!("http://{}:{}", BASE_URL, port);
-}
-
-async fn init_db() -> PgPool {
-    let configuration = get_configuration().expect("Failed to read configuration");
-    let connection_string = configuration.database.connection_string();
-    // The 'Connection' trait must be in scope for us to invoke
-    // 'PgConnection::connect - it is not an inherent method of the struct!
-    let connection = PgPool::connect(&connection_string)
-        .await
-        .expect("Failed to connect to Postgres.");
-    return connection;
-}
 
 #[actix_web::test]
 async fn subscribe_returns_200_for_valid_form_data() {
     // Arrange
-    let app_address = init("/subscriptions");
-    let mut connection = init_db().await;
+    let (app_address, db_pool) = setup::init("/subscriptions").await;
+
     let client = reqwest::Client::new();
-    let encName = encode("Night Stucker");
-    let encEmail = encode("superjose_49@hotmail.com");
-    let body = format!("name={}&email={}", encName, encEmail);
+    let enc_name = encode("Night Stucker");
+    let enc_email = encode("superjose_49@hotmail.com");
+    let body = format!("name={}&email={}", enc_name, enc_email);
 
     // Act
     let response = client
@@ -72,9 +26,8 @@ async fn subscribe_returns_200_for_valid_form_data() {
     // Assert
     assert_eq!(200, response.status().as_u16());
     let saved = sqlx::query!("SELECT email, name FROM subscriptions")
-        .fetch_one(&mut connection)
-        .await
-        .expect("Failed to fetch saved subscription.");
+        .fetch_one(&db_pool)
+        .await;
 
     assert_eq!(saved.email, "Night Stucker");
     assert_eq!(saved.name, "superjose_49@hotmail.com");
@@ -83,7 +36,7 @@ async fn subscribe_returns_200_for_valid_form_data() {
 #[actix_web::test]
 async fn subscribe_returns_400_when_data_is_missing() {
     // Arrange
-    let app_address = init("/subscriptions");
+    let (app_address, _) = setup::init("/subscriptions").await;
     let client = reqwest::Client::new();
     let name = encode("Night Stucker");
     let email = encode("superjose_49@hotmail.com");
@@ -128,7 +81,7 @@ async fn parametrized_subscribe_returns_400_when_data_is_missing(
     #[case] email: &str,
     #[case] error_message: &str,
 ) {
-    let app_address = init("/subscriptions");
+    let (app_address, _) = setup::init("/subscriptions").await;
     let client = reqwest::Client::new();
 
     let invalid_body = format!("name={}email={}", encode(name), encode(email));
@@ -154,11 +107,11 @@ async fn parametrized_subscribe_returns_400_when_data_is_missing(
 async fn health_check_works() {
     // Arrange
     let client = reqwest::Client::new();
-    let url = init("/health_check");
+    let (app_address, _) = setup::init("/health_check").await;
 
     // Act
     let response = client
-        .get(url)
+        .get(app_address)
         .send()
         .await
         .expect("Failed to execute request.");
