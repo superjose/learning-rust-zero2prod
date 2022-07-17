@@ -1,6 +1,7 @@
-use sqlx::PgPool;
+use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
-use zero2prod::configuration::get_configuration;
+use uuid::Uuid;
+use zero2prod::configuration::{get_configuration, DatabaseSettings};
 
 const BASE_URL: &str = "127.0.0.1";
 
@@ -18,17 +19,6 @@ pub async fn init(url: &str) -> (String, PgPool) {
     let app = spawn_app().await;
     let addr = format!("{}{}", app.address, url);
     return (addr, app.db_pool);
-}
-
-async fn init_db() -> PgPool {
-    let configuration = get_configuration().expect("Failed to read configuration");
-    let connection_string = &configuration.database.connection_string();
-    // The 'Connection' trait must be in scope for us to invoke
-    // 'PgConnection::connect - it is not an inherent method of the struct!
-    let connection = PgPool::connect(&connection_string)
-        .await
-        .expect("Failed to connect to Postgres.");
-    return connection;
 }
 
 // Launch our application in the background ~somehow~
@@ -52,4 +42,37 @@ async fn spawn_app() -> TestApp {
         address,
         db_pool: db_connection,
     }
+}
+
+async fn init_db() -> PgPool {
+    let mut configuration = get_configuration().expect("Failed to read configuration");
+
+    // We change the db name in each run as we need to run the test multiple times
+    configuration.database.database_name = Uuid::new_v4().to_string();
+
+    return configure_database(&configuration.database).await;
+}
+
+async fn configure_database(config: &DatabaseSettings) -> PgPool {
+    let mut connection = PgConnection::connect(&config.connection_string_without_db())
+        .await
+        .expect("Failed to connect to Postgres.");
+
+    connection
+        .execute(format!(r#"CREATE DATABASE "{}""#, config.database_name).as_str())
+        .await
+        .expect("Failed to create the db");
+
+    // Migrate the database
+
+    let connection_pool = PgPool::connect(&config.connection_string())
+        .await
+        .expect("Failed to connect to Postgres");
+
+    sqlx::migrate!("./migrations")
+        .run(&connection_pool)
+        .await
+        .expect("Failed to migrate db");
+
+    return connection_pool;
 }
