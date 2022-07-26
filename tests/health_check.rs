@@ -7,7 +7,7 @@ use urlencoding::encode;
 #[actix_web::test]
 async fn subscribe_returns_200_for_valid_form_data() {
     // Arrange
-    let (app_address, db_pool) = setup::init("/subscriptions").await;
+    let app = setup::init("/subscriptions").await;
 
     let client = reqwest::Client::new();
     let enc_name = encode("Night Stucker");
@@ -16,7 +16,7 @@ async fn subscribe_returns_200_for_valid_form_data() {
 
     // Act
     let response = client
-        .post(app_address)
+        .post(&app.address)
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body(body)
         .send()
@@ -26,7 +26,7 @@ async fn subscribe_returns_200_for_valid_form_data() {
     // Assert
     assert_eq!(200, response.status().as_u16());
     let saved = sqlx::query!("SELECT email, name FROM subscriptions")
-        .fetch_one(&db_pool)
+        .fetch_one(&app.db_pool)
         .await
         .expect("Failed to execute db");
 
@@ -37,7 +37,7 @@ async fn subscribe_returns_200_for_valid_form_data() {
 #[actix_web::test]
 async fn subscribe_returns_400_when_data_is_missing() {
     // Arrange
-    let (app_address, _) = setup::init("/subscriptions").await;
+    let app = setup::init("/subscriptions").await;
     let client = reqwest::Client::new();
     let name = encode("Night Stucker");
     let email = encode("superjose_49@hotmail.com");
@@ -56,7 +56,7 @@ async fn subscribe_returns_400_when_data_is_missing() {
     for (invalid_body, error_message) in test_cases {
         // Act
         let response = client
-            .post(&app_address)
+            .post(&app.address)
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(invalid_body)
             .send()
@@ -82,13 +82,13 @@ async fn parametrized_subscribe_returns_400_when_data_is_missing(
     #[case] email: &str,
     #[case] error_message: &str,
 ) {
-    let (app_address, _) = setup::init("/subscriptions").await;
+    let app = setup::init("/subscriptions").await;
     let client = reqwest::Client::new();
 
     let invalid_body = format!("name={}email={}", encode(name), encode(email));
     // Act
     let response = client
-        .post(&app_address)
+        .post(&app.address)
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body(invalid_body)
         .send()
@@ -108,11 +108,11 @@ async fn parametrized_subscribe_returns_400_when_data_is_missing(
 async fn health_check_works() {
     // Arrange
     let client = reqwest::Client::new();
-    let (app_address, _) = setup::init("/health_check").await;
+    let app = setup::init("/health_check").await;
 
     // Act
     let response = client
-        .get(app_address)
+        .get(&app.address)
         .send()
         .await
         .expect("Failed to execute request.");
