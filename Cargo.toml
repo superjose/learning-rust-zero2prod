@@ -27,6 +27,7 @@ futures = "0.3.21"
 smol = "1.2.5"
 log = "0.4.17"
 env_logger = "0.9.0"
+dotenv = "0.15.0"
 
 [dependencies.sqlx]
 version = "0.6.0"
