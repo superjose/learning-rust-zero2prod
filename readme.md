@@ -134,3 +134,9 @@ logs concerning the fulfilling of that specific request
 ### 4.5 Structured Logging
 
 This is a must read section of the book. Go to page 88.
+
+### 4.9
+
+In a large project it is very diffcult to spot that a dependency has become unused after a refactoring.
+Luckily enough, tooling comes to the rescue once again - let’s install cargo-udeps (unused
+dependencies):
