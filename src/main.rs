@@ -6,6 +6,12 @@ use dotenv;
 use zero2prod::configuration::get_configuration;
 use zero2prod::startup::run;
 
+
+use tracing::subscriber::set_global_default;
+use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+
+
 const BASE_URL: &str = "127.0.0.1";
 
 /**
@@ -13,6 +19,11 @@ Everything was moved to lib.rs to prevent clashes
 */
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // For adding logging functionality
+    // dotenv was added to load the RUST_LOG env variable from .env
+    // This will load it into env_logger which actix will use to generate
+    // logs.
+    // This is what we say when we talk about a local decision.
     dotenv::dotenv().ok();
     // `init` call `set_logger`, so this is all we need to do.
     //  We are also falling back to printing all the logs at info-level

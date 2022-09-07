@@ -119,3 +119,18 @@ cargo add chrono
 chrono will work for Utc::now
 
 Cargo test no capture
+
+### 4.4.1 Interactions with External Systems
+
+Let’s start with a tried-and-tested rule of thumb: any interaction with external systems over the
+network should be closely monitored. We might experience networking issues, the database might be
+unavailable, queries might get slower over time as the subscribers table gets longer, etc.
+
+We need a way to correlate all logs related to the same request.
+This is usually achieved using a request id (also known as correlation id): when we start to process
+an incoming request we generate a random identifier (e.g. a UUID) which is then associated to all
+logs concerning the fulfilling of that specific request
+
+### 4.5 Structured Logging
+
+This is a must read section of the book. Go to page 88.
