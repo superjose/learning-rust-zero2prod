@@ -1,16 +1,25 @@
+use std::io::Sink;
+
 use tracing::{subscriber::set_global_default, Subscriber};
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_log::LogTracer;
-use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+use tracing_subscriber::{fmt::MakeWriter, layer::SubscriberExt, EnvFilter, Registry};
 
-pub fn get_subscriber(name: String) -> impl Subscriber + Send + Sync {
+pub fn get_subscriber(name: String, sink: Sink) -> impl Subscriber + Send + Sync
+where
+    // This "weird" syntax is a higher-ranked trait bound (HRTB)
+    // It basically means that Sink implements the `MakeWriter`
+    // trait for all choices of the lifetime parameter `'a`
+    // Check out https://doc.rust-lang.org/nomicon/hrtb.html
+    // for more details.
+    Sink: for<'a> MakeWriter<'a> + Send + Sync + 'static,
+{
     //  We are also falling back to printing all the logs at info-level
     //  or above if the RUST_LOG environment variable has not been set.
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     let formatting_layer = BunyanFormattingLayer::new(
-        name,
-        //Output the formatted spans to stdout
-        std::io::stdout,
+        name, sink, //Output the formatted spans to stdout
+             // std::io::stdout,
     );
 
     // The `with` method is provided by `SubscriberExt`, an extension

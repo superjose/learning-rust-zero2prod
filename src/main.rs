@@ -4,7 +4,7 @@ use std::net::TcpListener;
 use dotenv;
 use zero2prod::configuration::get_configuration;
 use zero2prod::startup::run;
-use zero2prod::telemtry::{get_subscriber, init_subscriber};
+use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
 const BASE_URL: &str = "127.0.0.1";
 
@@ -20,7 +20,7 @@ async fn main() -> std::io::Result<()> {
     // This is what we say when we talk about a local decision.
     dotenv::dotenv().ok();
 
-    let subscriber = get_subscriber("zero2prod".into());
+    let subscriber = get_subscriber("zero2prod".into(), std::io::stdout);
     init_subscriber(subscriber);
 
     // Bubble up the io::Error if we failed to bind the address
