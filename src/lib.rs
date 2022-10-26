@@ -2,7 +2,7 @@
 pub mod configuration;
 pub mod routes;
 pub mod startup;
-pub mod telemtry;
+pub mod telemetry;
 
 use actix_web::dev::Server;
 use sqlx::PgPool;

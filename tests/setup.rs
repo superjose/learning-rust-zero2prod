@@ -1,27 +1,42 @@
+use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
-use std::thread;
 use uuid::Uuid;
+
 use zero2prod::configuration::{get_configuration, DatabaseSettings};
+use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
 const BASE_URL: &str = "127.0.0.1";
 
+static TRACING: Lazy<()> = Lazy::new(|| {
+    let default_filter_level = "info".to_string();
+    let subscriber_name = String::from("test");
+
+    let test_log = std::env::var("TEST_LOG").is_ok();
+
+    if (test_log) {
+        let subscriber = get_subscriber(default_filter_level, std::io::stdout);
+        init_subscriber(subscriber);
+    } else {
+        let subscriber = get_subscriber(default_filter_level, std::io::sink);
+        init_subscriber(subscriber);
+    }
+});
+
 pub struct TestApp {
-    db_name: String,
-    connection_string: String,
     pub address: String,
     pub db_pool: PgPool,
     pub connection: PgConnection,
 }
 
-impl TestApp {
-    async fn terminate(&mut self) {
-        self.connection
-            .execute(format!(r#"DROP DATABASE "{}""#, &self.db_name).as_str())
-            .await
-            .expect("Failed to create the db");
-    }
-}
+// impl TestApp {
+//     async fn terminate(&mut self) {
+//         self.connection
+//             .execute(format!(r#"DROP DATABASE "{}""#, &self.db_name).as_str())
+//             .await
+//             .expect("Failed to create the db");
+//     }
+// }
 
 /**
  * We need to refactor our project into a library and a binary: all our logic will live in the library crate
@@ -41,6 +56,10 @@ async fn spawn_app() -> TestApp {
     let base_url = format!("{}:0", BASE_URL);
     let listener = TcpListener::bind(base_url).expect("Failed to bind random port");
 
+    // The first time `initialize` is invoked the code in `TRACING` is executed.
+    // All other invocations will instead skip execution
+    Lazy::force(&TRACING);
+
     // We retrieve the port assigned by the OS
     let port = listener.local_addr().unwrap().port();
 
@@ -52,11 +71,9 @@ async fn spawn_app() -> TestApp {
     let address = format!("http://{}:{}", BASE_URL, port);
 
     TestApp {
-        db_name: String::from(db_name),
         address,
         db_pool: db_connection,
         connection,
-        connection_string,
     }
 }
 
