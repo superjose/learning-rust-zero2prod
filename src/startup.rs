@@ -1,4 +1,4 @@
-use crate::routes::{health_check, subscribe};
+use crate::routes::{get_subscribers, health_check, subscribe};
 use actix_web::web::Data;
 
 use actix_web::{dev::Server, middleware::Logger, App, HttpServer};
@@ -13,6 +13,7 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
             .wrap(Logger::default())
             .service(health_check)
             .service(subscribe)
+            .service(get_subscribers)
             // Get a pointer and attach it to the application state
             .app_data(connection.clone())
         // .route("/hey", web::get().to(manual_hello))

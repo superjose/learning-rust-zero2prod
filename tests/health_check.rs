@@ -1,14 +1,16 @@
 use actix_web;
 use rstest::rstest;
-mod setup;
-
 
 use urlencoding::encode;
+
+#[path = "./tests_setup/main.rs"]
+mod main;
+use main::init;
 
 #[actix_web::test]
 async fn subscribe_returns_200_for_valid_form_data() {
     // Arrange
-    let app = setup::init("/subscriptions").await;
+    let app = init("/subscriptions").await;
 
     let client = reqwest::Client::new();
     let enc_name = encode("Night Stucker");
@@ -38,7 +40,7 @@ async fn subscribe_returns_200_for_valid_form_data() {
 #[actix_web::test]
 async fn subscribe_returns_400_when_data_is_missing() {
     // Arrange
-    let app = setup::init("/subscriptions").await;
+    let app = init("/subscriptions").await;
     let client = reqwest::Client::new();
     let name = encode("Night Stucker");
     let email = encode("superjose_49@hotmail.com");
@@ -83,7 +85,7 @@ async fn parametrized_subscribe_returns_400_when_data_is_missing(
     #[case] email: &str,
     #[case] error_message: &str,
 ) {
-    let app = setup::init("/subscriptions").await;
+    let app = init("/subscriptions").await;
     let client = reqwest::Client::new();
 
     let invalid_body = format!("name={}email={}", encode(name), encode(email));
@@ -109,7 +111,7 @@ async fn parametrized_subscribe_returns_400_when_data_is_missing(
 async fn health_check_works() {
     // Arrange
     let client = reqwest::Client::new();
-    let app = setup::init("/health_check").await;
+    let app = init("/health_check").await;
 
     // Act
     let response = client

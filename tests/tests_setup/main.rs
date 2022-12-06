@@ -1,4 +1,5 @@
 use once_cell::sync::Lazy;
+use secrecy::ExposeSecret;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use uuid::Uuid;
@@ -6,37 +7,30 @@ use uuid::Uuid;
 use zero2prod::configuration::{get_configuration, DatabaseSettings};
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
+#[path = "./test_app.rs"]
+mod test_app;
+use test_app::{TestApp, DB_NAME_PREFIX};
+
 const BASE_URL: &str = "127.0.0.1";
 
 static TRACING: Lazy<()> = Lazy::new(|| {
     let default_filter_level = "info".to_string();
-    let subscriber_name = String::from("test");
 
     let test_log = std::env::var("TEST_LOG").is_ok();
 
-    if (test_log) {
-        let subscriber = get_subscriber(default_filter_level, std::io::stdout);
+    if test_log {
+        let subscriber = get_subscriber(
+            "zero2prod-test".into(),
+            default_filter_level,
+            std::io::stdout,
+        );
         init_subscriber(subscriber);
     } else {
-        let subscriber = get_subscriber(default_filter_level, std::io::sink);
+        let subscriber =
+            get_subscriber("zero2prod-test".into(), default_filter_level, std::io::sink);
         init_subscriber(subscriber);
     }
 });
-
-pub struct TestApp {
-    pub address: String,
-    pub db_pool: PgPool,
-    pub connection: PgConnection,
-}
-
-// impl TestApp {
-//     async fn terminate(&mut self) {
-//         self.connection
-//             .execute(format!(r#"DROP DATABASE "{}""#, &self.db_name).as_str())
-//             .await
-//             .expect("Failed to create the db");
-//     }
-// }
 
 /**
  * We need to refactor our project into a library and a binary: all our logic will live in the library crate
@@ -72,6 +66,8 @@ async fn spawn_app() -> TestApp {
 
     TestApp {
         address,
+        db_name,
+        connection_string,
         db_pool: db_connection,
         connection,
     }
@@ -81,14 +77,16 @@ async fn init_db() -> (PgConnection, PgPool, String, String) {
     let mut configuration = get_configuration().expect("Failed to read configuration");
 
     // We change the db name in each run as we need to run the test multiple times
-    configuration.database.database_name = Uuid::new_v4().to_string();
+    let db_name = format!("{}{}", DB_NAME_PREFIX, Uuid::new_v4().to_string());
+
+    configuration.database.database_name = db_name;
 
     let (connection, pool) = configure_database(&configuration.database).await;
 
     return (
         connection,
         pool,
-        String::from(&configuration.database.database_name),
+        configuration.database.database_name.clone(),
         configuration.database.connection_string_without_db(),
     );
 }
@@ -105,7 +103,7 @@ async fn configure_database(config: &DatabaseSettings) -> (PgConnection, PgPool)
 
     // Migrate the database
 
-    let connection_pool = PgPool::connect(&config.connection_string())
+    let connection_pool = PgPool::connect(&config.connection_string().expose_secret())
         .await
         .expect("Failed to connect to Postgres");
 
@@ -116,14 +114,3 @@ async fn configure_database(config: &DatabaseSettings) -> (PgConnection, PgPool)
 
     return (connection, connection_pool);
 }
-
-// impl Drop for TestApp {
-//     fn drop(&mut self) {
-//         thread::scope(|s| {
-//             s.spawn(|| {
-//                 let runtime = tokio::runtime::Builder::new_multi_thread().build().unwrap();
-//                 runtime.block_on(self.terminate());
-//             });
-//         });
-//     }
-// }
